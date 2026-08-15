@@ -1,0 +1,343 @@
+/* ---------------------------------------------------------------------------
+   ClipForge dashboard — design tokens
+   Deliberate dark neutral (forge) with a single orange accent. System fonts
+   for reliability on ARM self-hosted devices.
+--------------------------------------------------------------------------- */
+
+:root {
+  --bg: #0e1116;
+  --surface: #161b22;
+  --surface-2: #1b222c;
+  --border: rgba(255, 255, 255, 0.09);
+  --text: #e8ecf3;
+  --text-secondary: #9aa3b2;
+  --text-faint: #7c8594;
+
+  --accent: #f97316;
+  --accent-strong: #fb923c;
+  --success: #34d399;
+  --danger: #f87171;
+  --warning: #fbbf24;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.4em;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.small {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.err-text {
+  color: var(--danger);
+  margin: 0 0 var(--space-2);
+}
+
+/* ------------------------------- layout ---------------------------------- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+.content {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  flex: 1;
+}
+
+/* --------------------------------- logo ---------------------------------- */
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.logo-mark {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.logo-text span {
+  color: var(--accent);
+}
+
+/* --------------------------------- hero ---------------------------------- */
+
+.hero {
+  max-width: 640px;
+  margin-bottom: var(--space-7);
+}
+
+.hero-title {
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-3);
+  font-weight: 700;
+}
+
+.hero-sub {
+  margin: 0;
+  font-size: 15.5px;
+  max-width: 52ch;
+}
+
+/* -------------------------------- stats ---------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+}
+
+.stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.stat-label {
+  font-size: 13px;
+}
+
+/* -------------------------------- panels --------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.panel-head h2 {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.status-name {
+  flex: 1;
+  font-weight: 550;
+}
+
+.status-meta {
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  padding: var(--space-6) var(--space-3);
+  text-align: center;
+}
+
+.empty p {
+  margin: 0 0 var(--space-2);
+}
+
+/* ------------------------------ status pill ------------------------------ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.pill-ok {
+  color: var(--success);
+}
+
+.pill-ok .dot {
+  background: var(--success);
+}
+
+.pill-warn {
+  color: var(--warning);
+}
+
+.pill-warn .dot {
+  background: var(--warning);
+}
+
+.pill-err {
+  color: var(--danger);
+}
+
+.pill-err .dot {
+  background: var(--danger);
+}
+
+/* -------------------------------- footer --------------------------------- */
+
+.footer {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  text-align: center;
+}
+
+/* -------------------------------- motion --------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero,
+  .stats,
+  .grid {
+    animation: rise 0.4s var(--ease) both;
+  }
+
+  .stats {
+    animation-delay: 0.05s;
+  }
+
+  .grid {
+    animation-delay: 0.1s;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* ------------------------------ responsive ------------------------------- */
+
+@media (max-width: 640px) {
+  .topbar,
+  .content {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  .content {
+    padding-top: var(--space-5);
+  }
+}

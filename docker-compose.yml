@@ -1,0 +1,154 @@
+# ==============================================================================
+# ClipForge — Phase 1 foundation stack
+# All images publish linux/arm64 (Orange Pi 5 Pro) and linux/amd64.
+#   cp .env.example .env   (edit secrets)
+#   docker compose up -d
+# ==============================================================================
+
+name: clipforge
+
+services:
+  # ---- MySQL (primary database) ---------------------------------------------
+  clipforge-mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-clipforge_root_dev}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-clipforge}
+      MYSQL_USER: ${MYSQL_USER:-clipforge}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-clipforge_dev}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - clipforge
+
+  # ---- Redis (queue + cache) -------------------------------------------------
+  clipforge-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - clipforge
+
+  # ---- FastAPI backend -------------------------------------------------------
+  clipforge-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: clipforge-backend:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-mysql+pymysql://clipforge:clipforge_dev@clipforge-mysql:3306/clipforge?charset=utf8mb4}
+      REDIS_URL: ${REDIS_URL:-redis://clipforge-redis:6379/0}
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      TEMP_STORAGE_PATH: /data/temp
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    ports:
+      - "${API_BIND:-127.0.0.1:8000}:8000"
+    depends_on:
+      clipforge-mysql:
+        condition: service_healthy
+      clipforge-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    volumes:
+      - temp_data:/data
+    networks:
+      - clipforge
+
+  # ---- Worker (heavy jobs: download/transcribe/analyze/render) ---------------
+  clipforge-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: clipforge-backend:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-mysql+pymysql://clipforge:clipforge_dev@clipforge-mysql:3306/clipforge?charset=utf8mb4}
+      REDIS_URL: ${REDIS_URL:-redis://clipforge-redis:6379/0}
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      TEMP_STORAGE_PATH: /data/temp
+    command: ["python", "-m", "worker.main"]
+    depends_on:
+      clipforge-mysql:
+        condition: service_healthy
+      clipforge-redis:
+        condition: service_healthy
+    volumes:
+      - temp_data:/data
+    networks:
+      - clipforge
+
+  # ---- Frontend (static SPA served by nginx) ---------------------------------
+  clipforge-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: clipforge-frontend:latest
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - clipforge
+
+  # ---- Reverse proxy (single entry point: http://localhost) ------------------
+  clipforge-nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      clipforge-frontend:
+        condition: service_healthy
+      clipforge-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - clipforge
+
+volumes:
+  mysql_data:
+  redis_data:
+  temp_data:
+
+networks:
+  clipforge:
+    driver: bridge

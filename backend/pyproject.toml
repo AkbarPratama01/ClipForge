@@ -1,0 +1,9 @@
+[project]
+name = "clipforge-backend"
+version = "0.1.0"
+description = "ClipForge API backend — AI video repurposing pipeline"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --disable-warnings"
