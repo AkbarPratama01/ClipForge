@@ -90,6 +90,7 @@ export interface VideoSummary {
   duration: number | null;
   status: string;
   error_code?: string | null;
+  download_progress?: number | null;
   created_at?: string | null;
 }
 

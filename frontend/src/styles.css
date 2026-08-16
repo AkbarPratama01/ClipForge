@@ -579,3 +579,34 @@ code {
     padding-top: var(--space-5);
   }
 }
+
+/* --------------------------- download progress --------------------------- */
+
+.dl-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-track {
+  width: 90px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s var(--ease);
+}
+
+.dl-pct {
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

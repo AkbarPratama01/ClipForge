@@ -487,22 +487,30 @@ function VideosPanel() {
   };
   useEffect(() => {
     let cancelled = false;
+    let intervalId: number | undefined;
     const load = async () => {
+      let downloading = false;
       try {
         const list = await fetchVideos();
         if (!cancelled) {
           setVideos(list);
           void loadCandidatesFor(list);
+          downloading = list.some((v) => v.status === "downloading");
         }
       } catch {
         if (!cancelled) setVideos(null);
       }
+      if (!cancelled) {
+        // Poll faster while a download is in flight so the percentage bar
+        // updates smoothly; settle back to 15s otherwise.
+        if (intervalId) window.clearInterval(intervalId);
+        intervalId = window.setInterval(load, downloading ? 5_000 : 15_000);
+      }
     };
     void load();
-    const id = window.setInterval(load, 15_000);
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      if (intervalId) window.clearInterval(intervalId);
     };
   }, []);
 
@@ -694,6 +702,24 @@ function VideosPanel() {
                     >
                       {analyzingId === v.id ? "…" : "Analyze"}
                     </button>
+                  ) : null}
+                  {v.status === "downloading" ? (
+                    <span
+                      className="dl-wrap"
+                      title={`Download ${Math.round(v.download_progress ?? 0)}%`}
+                    >
+                      <span className="progress-track">
+                        <span
+                          className="progress-fill"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, v.download_progress ?? 0))}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="muted small dl-pct">
+                        {Math.round(v.download_progress ?? 0)}%
+                      </span>
+                    </span>
                   ) : null}
                   <StatusPill status={v.status} />
                 </span>

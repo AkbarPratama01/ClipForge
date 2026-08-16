@@ -17,6 +17,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.core.redis import get_redis
 from app.modules.jobs.queue import JOB_DOWNLOAD_VIDEO, enqueue
 from app.modules.storage.models import StorageFile
 from app.modules.videos.models import Video
@@ -30,6 +31,15 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 class ImportRequest(BaseModel):
     url: str = Field(..., min_length=1, max_length=1024)
     upload_to_drive: bool = True
+
+
+def _download_progress(video_id: int) -> float | None:
+    """Live download percent reported by the worker into Redis (None when idle)."""
+    try:
+        raw = get_redis().get(f"clipforge:progress:video:{video_id}")
+        return round(float(raw), 1) if raw is not None else None
+    except (RedisError, ValueError):
+        return None
 
 
 def _video_dict(video: Video) -> dict:
@@ -48,6 +58,7 @@ def _video_dict(video: Video) -> dict:
         "checksum": video.checksum,
         "status": video.status,
         "error_code": video.error_code,
+        "download_progress": _download_progress(video.id),
         "created_at": video.created_at.isoformat() if video.created_at else None,
     }
 

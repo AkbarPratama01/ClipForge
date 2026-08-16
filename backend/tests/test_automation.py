@@ -7,6 +7,7 @@ from app.main import app
 from app.modules.analysis.models import ClipCandidate
 from app.modules.analysis.service import select_best_candidate
 from app.modules.jobs.queue import retry_delay_seconds
+from worker.jobs import _progress_percent
 from worker.watcher import is_video_file
 
 client = TestClient(app)
@@ -112,6 +113,29 @@ def test_retry_delay_doubles() -> None:
 
 def test_retry_delay_capped() -> None:
     assert retry_delay_seconds(10) == 300.0
+
+
+# ------------------------------------------------------------ download progress
+
+
+def test_progress_percent_normal() -> None:
+    assert (
+        _progress_percent({"status": "downloading", "downloaded_bytes": 500, "total_bytes": 1000})
+        == 50.0
+    )
+
+
+def test_progress_percent_uses_estimate() -> None:
+    assert _progress_percent({"downloaded_bytes": 250, "total_bytes_estimate": 1000}) == 25.0
+
+
+def test_progress_percent_unknown_total() -> None:
+    assert _progress_percent({"downloaded_bytes": 100}) is None
+    assert _progress_percent({}) is None
+
+
+def test_progress_percent_caps_at_100() -> None:
+    assert _progress_percent({"downloaded_bytes": 1500, "total_bytes": 1000}) == 100.0
 
 
 # --------------------------------------------------------------- status route

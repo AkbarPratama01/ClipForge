@@ -45,6 +45,7 @@ import yt_dlp
 from redis import RedisError
 
 from app.core.config import settings
+from app.core.redis import get_redis
 from app.database.session import SessionLocal
 from app.modules.jobs.queue import (
     JOB_ANALYZE,
@@ -111,12 +112,48 @@ def _chain_next(job_type: str, payload: dict, **context) -> None:
         logger.warning("job_chain_enqueue_failed", job_type=job_type, **context)
 
 
-def _download_to(url: str, dest_dir: str) -> dict:
+def _progress_percent(data: dict) -> float | None:
+    """yt-dlp progress hook payload → download percentage (None when unknown)."""
+    total = data.get("total_bytes") or data.get("total_bytes_estimate")
+    downloaded = data.get("downloaded_bytes") or 0
+    if not total:
+        return None
+    return min(100.0, downloaded / total * 100)
+
+
+def _download_progress_hook(video_id: int):
+    """yt-dlp progress hook: percent → Redis, where the API/dashboard reads it."""
+    key = f"clipforge:progress:video:{video_id}"
+
+    def hook(data: dict) -> None:
+        if data.get("status") != "downloading":
+            return
+        percent = _progress_percent(data)
+        if percent is None:
+            return
+        try:
+            get_redis().set(key, f"{percent:.1f}", ex=3600)
+        except RedisError:
+            pass
+
+    return hook
+
+
+def _clear_download_progress(video_id: int) -> None:
+    try:
+        get_redis().delete(f"clipforge:progress:video:{video_id}")
+    except RedisError:
+        pass
+
+
+def _download_to(url: str, dest_dir: str, progress_hook=None) -> dict:
     os.makedirs(dest_dir, exist_ok=True)
     opts = {
         **_YTDL_OPTS,
         "outtmpl": os.path.join(dest_dir, "%(id)s.%(ext)s"),
     }
+    if progress_hook is not None:
+        opts["progress_hooks"] = [progress_hook]
     with yt_dlp.YoutubeDL(opts) as ydl:
         return ydl.extract_info(url, download=True)
 
@@ -135,6 +172,7 @@ def _cleanup(dest_dir: str) -> None:
 def _download_with_retry(
     url: str,
     dest_dir: str,
+    progress_hook=None,
     attempts: int = 4,
     delay: float = 5.0,
 ) -> dict:
@@ -148,7 +186,7 @@ def _download_with_retry(
             _cleanup(dest_dir)
             time.sleep(delay)
         try:
-            return _download_to(url, dest_dir)
+            return _download_to(url, dest_dir, progress_hook=progress_hook)
         except Exception as exc:  # yt-dlp raises DownloadError on HTTP failures
             last_exc = exc
             logger.warning(
@@ -182,7 +220,11 @@ def handle_download_video(payload: dict) -> None:
 
         dest_dir = os.path.join(settings.temp_storage_path, "videos", str(video_id))
         try:
-            info = _download_with_retry(video.source_url, dest_dir)
+            info = _download_with_retry(
+                video.source_url,
+                dest_dir,
+                progress_hook=_download_progress_hook(video_id),
+            )
             update_metadata(db, video, info)
 
             local_path = _find_output(dest_dir)
@@ -194,6 +236,7 @@ def handle_download_video(payload: dict) -> None:
 
             duplicate = find_duplicate(db, video, checksum)
             if duplicate is not None:
+                _clear_download_progress(video_id)
                 set_status(db, video, "duplicate")
                 logger.info(
                     "duplicate_detected",
@@ -204,6 +247,7 @@ def handle_download_video(payload: dict) -> None:
                 _cleanup(dest_dir)
                 return
 
+            _clear_download_progress(video_id)
             set_status(db, video, "downloaded")
             logger.info(
                 "download_completed",
@@ -255,14 +299,17 @@ def handle_download_video(payload: dict) -> None:
             if settings.auto_approve:
                 _chain_next(JOB_TRANSCRIBE, {"video_id": video_id}, video_id=video_id)
         except yt_dlp.utils.DownloadError as exc:
+            _clear_download_progress(video_id)
             set_status(db, video, "failed", error_code="DOWNLOAD_FAILED")
             logger.warning("download_failed", video_id=video_id, error=str(exc)[:300])
             _cleanup(dest_dir)
         except StorageError as exc:
+            _clear_download_progress(video_id)
             set_status(db, video, "failed", error_code=exc.code)
             logger.warning("video_import_storage_failed", video_id=video_id, code=exc.code)
             _cleanup(dest_dir)
         except Exception as exc:
+            _clear_download_progress(video_id)
             set_status(db, video, "failed", error_code="VIDEO_IMPORT_FAILED")
             logger.warning("video_import_failed", video_id=video_id, error=str(exc)[:300])
             _cleanup(dest_dir)
