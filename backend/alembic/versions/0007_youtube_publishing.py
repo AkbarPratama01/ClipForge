@@ -43,7 +43,7 @@ def upgrade() -> None:
         sa.Column("video_id", sa.Integer(), nullable=False),
         sa.Column("youtube_video_id", sa.String(length=64), nullable=True),
         sa.Column("title", sa.String(length=512), nullable=False),
-        sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("description", sa.Text(), nullable=False, server_default=""),
         sa.Column("tags", sa.String(length=1024), nullable=False, server_default=""),
         sa.Column("privacy", sa.String(length=16), nullable=False, server_default="private"),
         sa.Column("scheduled_at", sa.DateTime(), nullable=True),
