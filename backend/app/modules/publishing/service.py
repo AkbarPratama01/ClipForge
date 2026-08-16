@@ -19,7 +19,7 @@ from google.oauth2.credentials import Credentials
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.crypto import decrypt_token, encrypt_token
+from app.core.crypto import decrypt_token, encrypt_token, require_token_encryption_key
 from app.core.settings_error import UnsetSettingError
 from app.modules.analysis.models import ClipCandidate
 from app.modules.publishing.errors import PublishingError, YouTubeNotConnected
@@ -43,6 +43,7 @@ def save_youtube_credentials(
     channel_id: str | None,
 ) -> YouTubeAccount:
     """Persist (encrypted) YouTube OAuth credentials, replacing the previous account."""
+    require_token_encryption_key()  # never store tokens under an ephemeral key
     account = db.query(YouTubeAccount).order_by(YouTubeAccount.id.desc()).first()
     encrypted = encrypt_token(credentials_json)
     if account is None:

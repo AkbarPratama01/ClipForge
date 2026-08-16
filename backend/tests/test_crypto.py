@@ -33,3 +33,18 @@ def test_ephemeral_key_without_setting(monkeypatch) -> None:
     monkeypatch.setattr(crypto.settings, "token_encryption_key", None)
     encrypted = crypto.encrypt_token("dev-secret")
     assert crypto.decrypt_token(encrypted) == "dev-secret"
+
+
+def test_require_key_returns_configured_key(monkeypatch) -> None:
+    key = Fernet.generate_key().decode()
+    monkeypatch.setattr(crypto.settings, "token_encryption_key", key)
+    assert crypto.require_token_encryption_key() == key
+
+
+def test_require_key_raises_when_unset(monkeypatch) -> None:
+    from app.core.settings_error import UnsetSettingError
+
+    monkeypatch.setattr(crypto.settings, "token_encryption_key", None)
+    with pytest.raises(UnsetSettingError) as exc:
+        crypto.require_token_encryption_key()
+    assert exc.value.code == "TOKEN_ENCRYPTION_KEY_MISSING"

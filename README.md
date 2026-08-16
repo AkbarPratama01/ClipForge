@@ -487,6 +487,7 @@ Pi.
 | `502` from `/api/*` after recreating API | `docker compose restart clipforge-nginx` (nginx caches upstream IPs) |
 | Health shows `degraded`          | Check `docker compose logs clipforge-api`; confirm MySQL/Redis volumes are intact |
 | Google Drive shows “Not connected” after restart | `TOKEN_ENCRYPTION_KEY` changed or unset — stored tokens can’t be decrypted; set the key and reconnect |
+| Video failed with `TOKEN_DECRYPTION_FAILED` | The account was connected while `TOKEN_ENCRYPTION_KEY` was empty (tokens were stored under an ephemeral process key). Set the key in `.env`, recreate the containers, reconnect Drive/YouTube, and re-import — since v0.1 the API refuses to store tokens without a configured key |
 | `GOOGLE_OAUTH_NOT_CONFIGURED`    | Fill `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` in `.env` and recreate the API container |
 | Video stuck on `failed` + `DOWNLOAD_FAILED` | Network blocked YouTube (common on cloud IPs) or yt-dlp outdated: `docker compose exec clipforge-worker pip install -U yt-dlp`, then re-import |
 | Inbox file never imported (`drive_file_ignored`) | Only video containers are imported (mp4/mov/mkv/webm/m4v/avi/mpeg/ts); rename or re-export the file |

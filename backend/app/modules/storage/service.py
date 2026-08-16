@@ -10,7 +10,7 @@ from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
 from sqlalchemy.orm import Session
 
-from app.core.crypto import decrypt_token, encrypt_token
+from app.core.crypto import decrypt_token, encrypt_token, require_token_encryption_key
 from app.core.config import settings
 from app.core.settings_error import UnsetSettingError
 from app.modules.storage.constants import DRIVE_FOLDERS
@@ -25,6 +25,7 @@ logger = structlog.get_logger(__name__)
 
 def save_google_credentials(db: Session, credentials_json: str, email: str | None) -> GoogleDriveAccount:
     """Persist (encrypted) OAuth credentials, replacing the previous account."""
+    require_token_encryption_key()  # never store tokens under an ephemeral key
     account = db.query(GoogleDriveAccount).order_by(GoogleDriveAccount.id.desc()).first()
     encrypted = encrypt_token(credentials_json)
     if account is None:

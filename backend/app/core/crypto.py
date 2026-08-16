@@ -10,12 +10,31 @@ import structlog
 from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import settings
+from app.core.settings_error import UnsetSettingError
 
 logger = structlog.get_logger(__name__)
 
 _fernet: Fernet | None = None
 _fernet_key: str | None = None
 _ephemeral_warned = False
+
+
+def require_token_encryption_key() -> str:
+    """Return the configured Fernet key, or fail loudly.
+
+    Storing OAuth tokens under the process-local ephemeral key silently
+    breaks every other process (worker) and every restart — the dashboard
+    would show "connected" while uploads fail with TOKEN_DECRYPTION_FAILED.
+    Production must set ``TOKEN_ENCRYPTION_KEY`` in .env.
+    """
+    if not settings.token_encryption_key:
+        raise UnsetSettingError(
+            "TOKEN_ENCRYPTION_KEY_MISSING",
+            "TOKEN_ENCRYPTION_KEY is not set in .env — generate one with "
+            "`python -m app.core.crypto`, add it to .env, then recreate the "
+            "containers (docker compose up -d).",
+        )
+    return settings.token_encryption_key
 
 
 def _get_fernet() -> Fernet:
