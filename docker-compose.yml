@@ -61,16 +61,16 @@ services:
       APP_ENV: ${APP_ENV:-development}
       APP_DEBUG: ${APP_DEBUG:-true}
       TEMP_STORAGE_PATH: /data/temp
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--proxy-headers"]
     ports:
-      - "${API_BIND:-127.0.0.1:8000}:8000"
+      - "${API_BIND:-127.0.0.1:8002}:8002"
     depends_on:
       clipforge-mysql:
         condition: service_healthy
       clipforge-redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8002/healthz', timeout=3)"]
       interval: 15s
       timeout: 5s
       retries: 5
