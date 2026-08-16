@@ -134,7 +134,7 @@ class YouTubeProvider(PublishingProvider):
                 end = offset + len(chunk) - 1
                 resp = session.put(
                     session_uri,
-                    content=chunk,
+                    data=chunk,
                     headers={"Content-Range": f"bytes {offset}-{end}/{size}"},
                 )
                 offset = end + 1
