@@ -1,8 +1,13 @@
-"""ClipForge worker entrypoint — Phase 1 stub.
+"""ClipForge worker entrypoint.
 
-Connects to Redis and keeps the container alive with a heartbeat loop. The
-job-consumption loop replaces this in Phase 5 (jobs module), but the process
-lifecycle (graceful shutdown on SIGTERM/SIGINT) stays as-is.
+Runs three coroutines:
+
+- heartbeat: Redis connectivity (Phase 1)
+- job_loop: consume Redis jobs — Phase 3 consumes DOWNLOAD_VIDEO (yt-dlp →
+  checksum → Drive upload); the full job state machine arrives in Phase 5
+- DriveWatcher: polls ``01_Inbox`` when Google Drive OAuth is configured (§66)
+
+Graceful shutdown on SIGTERM/SIGINT.
 """
 
 import asyncio
@@ -47,12 +52,32 @@ def main() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
 
-    task = loop.create_task(worker_loop())
+    tasks = [loop.create_task(worker_loop())]
+    try:
+        from worker.jobs import job_loop
+
+        tasks.append(loop.create_task(job_loop()))
+    except Exception:
+        logger.warning("job_loop_init_failed", exc_info=True)
+
+    try:
+        from worker.watcher import watcher_enabled
+
+        if watcher_enabled():
+            from worker.watcher import DriveWatcher
+
+            tasks.append(loop.create_task(DriveWatcher().run()))
+        else:
+            logger.info("drive_watcher_disabled", reason="google drive not configured")
+    except Exception:
+        logger.warning("drive_watcher_init_failed", exc_info=True)
+
     try:
         loop.run_until_complete(stop.wait())
     finally:
-        task.cancel()
-        loop.run_until_complete(asyncio.gather(task, return_exceptions=True))
+        for task in tasks:
+            task.cancel()
+        loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
         logger.info("worker_stopped")
         loop.close()
 

@@ -10,9 +10,17 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    HF_HOME=/data/models
 
 WORKDIR /app
+
+# FFmpeg: used by yt-dlp to merge best video+audio streams (Phase 3) and by
+# the renderer (Phase 6). Debian bookworm publishes linux/arm64 builds.
+# fonts-dejavu-core provides the Sans font used for burned-in ASS subtitles.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first so this layer is cached across rebuilds.
 COPY backend/requirements.txt .
@@ -24,9 +32,9 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY backend/ /app/
 COPY worker/ /app/worker/
 
-# Temporary processing area. The named `temp_data` volume inherits this
-# ownership on first mount so the unprivileged user can read/write it.
-RUN mkdir -p /data/temp && chown -R nobody:nogroup /data && chmod -R 770 /data
+# Temporary processing area + Whisper model cache. Named volumes inherit
+# this ownership on first mount so the unprivileged user can read/write them.
+RUN mkdir -p /data/temp /data/models && chown -R nobody:nogroup /data && chmod -R 770 /data
 
 USER nobody
 
