@@ -532,6 +532,12 @@ code {
 
 /* -------------------------------- footer --------------------------------- */
 
+.panel-actions {
+  margin-top: var(--space-3);
+  display: flex;
+  justify-content: flex-end;
+}
+
 .footer {
   padding: var(--space-4) var(--space-6) var(--space-6);
   text-align: center;

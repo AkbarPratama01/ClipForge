@@ -3,6 +3,8 @@ import {
   analyzeVideo,
   connectDrive,
   connectYouTube,
+  disconnectDrive,
+  disconnectYouTube,
   fetchAutomationStatus,
   fetchCandidates,
   fetchDriveFiles,
@@ -275,6 +277,21 @@ function DrivePanel() {
     }
   };
 
+  const disconnect = async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      await disconnectDrive();
+      setStatus({ connected: false });
+      setFiles(null);
+      setNotice("Google Drive disconnected — token removed.");
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Disconnect failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -304,6 +321,16 @@ function DrivePanel() {
               </li>
             ) : null}
           </ul>
+
+          <div className="panel-actions">
+            <button
+              className="btn btn-mini btn-danger"
+              onClick={() => void disconnect()}
+              disabled={busy}
+            >
+              {busy ? "…" : "Disconnect"}
+            </button>
+          </div>
 
           <div className="drive-files">
             <p className="muted small drive-files-title">
@@ -387,6 +414,20 @@ function YouTubePanel() {
     }
   };
 
+  const disconnect = async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      await disconnectYouTube();
+      setStatus({ connected: false });
+      setNotice("YouTube disconnected — token removed.");
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Disconnect failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -397,15 +438,26 @@ function YouTubePanel() {
       {notice ? <p className="notice">{notice}</p> : null}
 
       {status?.connected ? (
-        <ul className="status-list">
-          <li className="status-row">
-            <span className="status-name">Channel</span>
-            <span className="status-meta muted small">
-              {status.channel_name ?? "connected"}
-            </span>
-            <StatusPill status="ok" />
-          </li>
-        </ul>
+        <>
+          <ul className="status-list">
+            <li className="status-row">
+              <span className="status-name">Channel</span>
+              <span className="status-meta muted small">
+                {status.channel_name ?? "connected"}
+              </span>
+              <StatusPill status="ok" />
+            </li>
+          </ul>
+          <div className="panel-actions">
+            <button
+              className="btn btn-mini btn-danger"
+              onClick={() => void disconnect()}
+              disabled={busy}
+            >
+              {busy ? "…" : "Disconnect"}
+            </button>
+          </div>
+        </>
       ) : (
         <div className="empty">
           <p className="muted">Not connected.</p>

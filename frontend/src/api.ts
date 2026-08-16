@@ -82,6 +82,12 @@ export async function connectDrive(): Promise<{ auth_url: string }> {
   return (await res.json()) as { auth_url: string };
 }
 
+export async function disconnectDrive(): Promise<{ connected: boolean }> {
+  const res = await fetch("/api/google-drive/account", { method: "DELETE" });
+  if (!res.ok) throw new Error(await readError(res));
+  return (await res.json()) as { connected: boolean };
+}
+
 export interface VideoSummary {
   id: number;
   source_url: string;
@@ -227,6 +233,12 @@ export async function connectYouTube(): Promise<{ auth_url: string }> {
   const res = await fetch("/api/youtube/connect", { method: "POST" });
   if (!res.ok) throw new Error(await readError(res));
   return (await res.json()) as { auth_url: string };
+}
+
+export async function disconnectYouTube(): Promise<{ connected: boolean }> {
+  const res = await fetch("/api/youtube/account", { method: "DELETE" });
+  if (!res.ok) throw new Error(await readError(res));
+  return (await res.json()) as { connected: boolean };
 }
 
 export interface PublishOptions {

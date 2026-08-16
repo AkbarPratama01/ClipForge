@@ -30,3 +30,8 @@ def test_publications_list_degrades_when_database_down() -> None:
 def test_publication_detail_degrades_when_database_down() -> None:
     resp = client.get("/api/publications/1")
     assert resp.status_code in (404, 503)
+
+
+def test_youtube_disconnect_degrades_when_database_down() -> None:
+    resp = client.delete("/api/youtube/account")
+    assert resp.status_code in (200, 503)

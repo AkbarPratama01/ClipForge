@@ -37,3 +37,8 @@ def test_list_files_degrades_when_database_down() -> None:
 def test_bootstrap_degrades_when_database_down() -> None:
     resp = client.post("/api/google-drive/bootstrap")
     assert resp.status_code in (400, 503)
+
+
+def test_disconnect_degrades_when_database_down() -> None:
+    resp = client.delete("/api/google-drive/account")
+    assert resp.status_code in (200, 503)

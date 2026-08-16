@@ -30,6 +30,7 @@ from app.modules.publishing.errors import PublishingError
 from app.modules.publishing.service import (
     create_publication,
     get_publication,
+    get_youtube_account,
     list_publications,
     oauth_config_available,
     publication_payload,
@@ -169,6 +170,22 @@ def callback(
 @youtube_router.get("/status", summary="YouTube connection status")
 def status(db: Session = Depends(get_db)) -> JSONResponse:
     return JSONResponse(youtube_account_status(db))
+
+
+@youtube_router.delete("/account", summary="Disconnect YouTube (delete stored token)")
+def disconnect(db: Session = Depends(get_db)) -> JSONResponse:
+    """Log out locally: drop the stored (encrypted) YouTube credentials. The
+    channel can be reconnected any time; Google-side consent stays until
+    removed at myaccount.google.com/permissions."""
+    try:
+        account = get_youtube_account(db)
+        if account is not None:
+            db.delete(account)
+            db.commit()
+        logger.info("youtube_account_disconnected")
+    except OperationalError:
+        return _error_response(503, "STORAGE_ERROR", "Database is unavailable.")
+    return JSONResponse({"connected": False})
 
 
 # ------------------------------------------------------------- publications

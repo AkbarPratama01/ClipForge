@@ -30,6 +30,7 @@ from app.modules.storage.models import StorageFile
 from app.modules.storage.service import (
     account_status,
     ensure_folder_structure,
+    get_google_account,
     oauth_config_available,
     save_google_credentials,
 )
@@ -152,6 +153,22 @@ def callback(
 @router.get("/status", summary="Google Drive connection status")
 def status(db: Session = Depends(get_db)) -> JSONResponse:
     return JSONResponse(account_status(db))
+
+
+@router.delete("/account", summary="Disconnect Google Drive (delete stored token)")
+def disconnect(db: Session = Depends(get_db)) -> JSONResponse:
+    """Log out locally: drop the stored (encrypted) Drive credentials. The
+    account can be reconnected any time; Google-side consent stays until
+    removed at myaccount.google.com/permissions."""
+    try:
+        account = get_google_account(db)
+        if account is not None:
+            db.delete(account)
+            db.commit()
+        logger.info("drive_account_disconnected")
+    except OperationalError:
+        return _error_response(503, "STORAGE_ERROR", "Database is unavailable.")
+    return JSONResponse({"connected": False})
 
 
 @router.post("/bootstrap", summary="Create the ClipForge Drive folder structure (§8)")
