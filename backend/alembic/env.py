@@ -8,6 +8,14 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.database.base import Base
 
+# Import models so Alembic autogenerate sees every table.
+from app.modules.analysis import models as analysis_models  # noqa: F401
+from app.modules.publishing import models as publishing_models  # noqa: F401
+from app.modules.rendering import models as rendering_models  # noqa: F401
+from app.modules.storage import models as storage_models  # noqa: F401
+from app.modules.transcription import models as transcription_models  # noqa: F401
+from app.modules.videos import models as videos_models  # noqa: F401
+
 config = context.config
 
 if config.config_file_name is not None:
