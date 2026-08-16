@@ -27,8 +27,8 @@ HEARTBEAT_INTERVAL = 30.0
 async def worker_loop() -> None:
     client = Redis.from_url(
         settings.redis_url,
-        socket_connect_timeout=3.0,
-        socket_timeout=3.0,
+        socket_connect_timeout=5.0,
+        socket_timeout=30.0,
         decode_responses=True,
     )
     logger.info("worker_online", version=settings.app_version, env=settings.app_env)

@@ -22,24 +22,60 @@ API_URL = "https://api.deepseek.com/chat/completions"
 
 SYSTEM_PROMPT = """You are an expert short-form video editor for YouTube Shorts.
 
-Given a transcript with timestamped segments, find the 3–5 BEST moments to cut
-into standalone 15–60 second clips. A clip must work for a viewer who has NOT
-seen the long video.
+Your task is to analyze the provided timestamped transcript and select the
+3–5 strongest moments for standalone YouTube Shorts.
 
-Evaluate each candidate on:
-- hook_score: is the first 1–3 seconds curiosity-driven?
-- content_score: is there a real insight / fact / story / payoff?
-- context_score: is it understandable without the long video?
-- emotion_score: humor, surprise, controversy, inspiration, fear?
-- standalone_score: can it stand alone as a complete short?
-- retention_score: does the viewer have a reason to watch to the end?
+IMPORTANT:
+- Think internally, but DO NOT output your reasoning.
+- Return the final JSON immediately.
+- Do not explain your analysis.
+- Do not include markdown.
+- Do not include code fences.
+- The response MUST contain a non-empty "clips" array.
+- Select 3–5 valid clips whenever the transcript contains enough material.
+
+A clip should:
+- work for a viewer who has NOT seen the long video
+- be 15–60 seconds when possible
+- have a strong hook
+- contain a clear insight, story, emotion, or payoff
+- make sense on its own
+
+Evaluate:
+- hook_score
+- content_score
+- context_score
+- emotion_score
+- standalone_score
+- retention_score
 
 Rules:
-- NEVER cut mid-sentence. Use the exact segment boundaries from the input.
-- Start times must be >= the first segment boundary of the chosen moment.
-- Return ONLY valid JSON, no markdown:
-{"clips":[{"start_time":0.0,"end_time":0.0,"title":"","hook":"","reason":"","hook_score":0,"content_score":0,"context_score":0,"emotion_score":0,"standalone_score":0,"retention_score":0}]}
-All scores 0–100. start_time/end_time in seconds, aligned to segment boundaries."""
+- NEVER cut mid-sentence.
+- Use exact segment boundaries from the transcript.
+- start_time and end_time must correspond to transcript segment boundaries.
+- All scores must be integers from 0 to 100.
+- start_time and end_time are seconds.
+
+Return ONLY this JSON structure:
+
+{
+  "clips": [
+    {
+      "start_time": 0.0,
+      "end_time": 30.0,
+      "title": "Short title",
+      "hook": "Short hook",
+      "reason": "Why this moment works",
+      "hook_score": 90,
+      "content_score": 90,
+      "context_score": 85,
+      "emotion_score": 90,
+      "standalone_score": 85,
+      "retention_score": 90
+    }
+  ]
+}
+"""
 
 
 def build_analysis_prompt(transcript: dict, max_clips: int = 5) -> str:
@@ -84,8 +120,8 @@ class DeepSeekProvider(AIProvider):
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_content},
                     ],
-                    "temperature": 0.3,
-                    "max_tokens": 4000,
+                    "temperature": 0.1,
+                    "max_tokens": 8000,
                     "response_format": {"type": "json_object"},
                 },
                 timeout=120,

@@ -15,6 +15,6 @@ def get_redis() -> Redis:
     return Redis.from_url(
         settings.redis_url,
         decode_responses=True,
-        socket_connect_timeout=3.0,
-        socket_timeout=3.0,
+        socket_connect_timeout=5.0,
+        socket_timeout=30.0,
     )
